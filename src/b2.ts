@@ -1,19 +1,20 @@
-async function authorizeAccount(auth: BasicAuthType): Promise<Account> {
-    const getAccount = await fetch(
-        "https://api.backblazeb2.com/b2api/v2/b2_authorize_account",
-        {
-            headers: {
-                Authorization: auth,
-            },
-        }
-    )
-    if (getAccount.status == 401){
-        return { downloadUrl: null, authorizationToken: "none", status: getAccount.status } as Account
+export async function getDownloadAuthorization(apiUrl, accountToken, bucketId, fileName, validSeconds = 600) {
+  const body = {
+    bucketId,
+    fileNamePrefix: fileName,
+    validDurationInSeconds: validSeconds
+  };
+  const resp = await fetch(
+    apiUrl + '/b2api/v2/b2_get_download_authorization',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: accountToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
     }
-    const j = await getAccount.json() as B2AuthResponse;
-    //https://www.backblaze.com/b2/docs/b2_authorize_account.html
-    const account = { downloadUrl: j.downloadUrl, authorizationToken: j.authorizationToken, status: getAccount.status } as Account
-    return account;
+  );
+  if (!resp.ok) throw new Error("B2 download_authorization error " + resp.status + ": " + await resp.text());
+  return (await resp.json()).authorizationToken;
 }
-
-export { authorizeAccount }
